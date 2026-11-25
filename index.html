@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f766e" />
+  <meta name="description" content="OKOK 호환 블루투스 체중계 연동 및 신체 분석 앱" />
+  <title>내 체중계 — 스마트 바디 트래커</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" type="image/png" sizes="192x192" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="top-bar">
+      <div>
+        <h1>내 체중계</h1>
+        <p class="subtitle">광고 없는 나만의 바디 트래커</p>
+      </div>
+      <button id="installBtn" class="btn-install hidden" type="button">앱 설치</button>
+    </header>
+
+    <main class="content">
+      <!-- 1. 측정하기 탭 -->
+      <section id="tab-measure" class="tab-panel active">
+        <div class="card hero-card">
+          <div class="status-row">
+            <span id="bleStatusBadge" class="badge badge-idle">대기 중</span>
+            <span id="lastMeasuredAt" class="muted-text">최근 측정 없음</span>
+          </div>
+          <div class="weight-display">
+            <span id="liveWeight" class="weight-number">--.-</span>
+            <span class="weight-unit">kg</span>
+          </div>
+          <p id="liveSubInfo" class="sub-info">체중계에 올라간 뒤 아래 연결 버튼을 눌러 주세요.</p>
+
+          <div class="button-stack">
+            <button id="connectGattBtn" class="btn btn-primary" type="button">
+              블루투스 체중계 연결
+            </button>
+            <button id="scanBleBtn" class="btn btn-secondary" type="button">
+              신호 스캔 모드 (자동 방송형)
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>직접 입력 · 테스트 기록</h2>
+          <p class="help-text">블루투스 연결 전이나 체중계 없이도 숫자를 넣어 리포트와 그래프를 바로 확인해 볼 수 있어요.</p>
+          <form id="manualForm" class="manual-form">
+            <div class="input-row">
+              <label>
+                <span>몸무게 (kg)</span>
+                <input id="manualWeight" type="number" step="0.1" min="10" max="250" placeholder="예: 68.4" required />
+              </label>
+              <label>
+                <span>저항값 Ω (선택)</span>
+                <input id="manualImpedance" type="number" step="1" min="0" max="1500" placeholder="예: 510" />
+              </label>
+            </div>
+            <button class="btn btn-outline" type="submit">이 수치로 기록 저장</button>
+          </form>
+        </div>
+
+        <details class="card log-card">
+          <summary>블루투스 신호 로그 보기 (연결 확인용)</summary>
+          <pre id="bleLog" class="ble-log">아직 수신된 신호가 없어요.</pre>
+        </details>
+      </section>
+
+      <!-- 2. 신체 분석 리포트 탭 -->
+      <section id="tab-report" class="tab-panel">
+        <div id="reportEmpty" class="card empty-state">
+          <p>아직 저장된 측정 기록이 없어요.</p>
+          <p class="muted-text">「측정하기」에서 체중을 측정하거나 테스트 수치를 입력해 보세요.</p>
+        </div>
+
+        <div id="reportContent" class="hidden">
+          <div class="card summary-banner">
+            <div class="summary-main">
+              <div>
+                <span class="muted-text">현재 체중</span>
+                <div class="summary-weight"><span id="repWeight">0.0</span> kg</div>
+              </div>
+              <div class="goal-pill" id="repGoalDiff">목표까지 -</div>
+            </div>
+            <div class="summary-meta">
+              <div>
+                <span class="muted-text">신체 나이</span>
+                <strong id="repBodyAge">- 세</strong>
+              </div>
+              <div>
+                <span class="muted-text">기초대사량</span>
+                <strong id="repBmr">- kcal</strong>
+              </div>
+              <div>
+                <span class="muted-text">측정일</span>
+                <strong id="repDate">-</strong>
+              </div>
+            </div>
+            <p id="repImpedanceNote" class="note-banner hidden"></p>
+          </div>
+
+          <div id="metricsGrid" class="metrics-grid"></div>
+        </div>
+      </section>
+
+      <!-- 3. 변화 그래프 & 기록 탭 -->
+      <section id="tab-history" class="tab-panel">
+        <div class="card">
+          <div class="chart-header">
+            <h2>변화 추이</h2>
+            <div class="segmented" id="chartMetricSwitch">
+              <button type="button" data-metric="weightKg" class="active">체중</button>
+              <button type="button" data-metric="bodyFatPct">체지방</button>
+              <button type="button" data-metric="muscleMassKg">근육량</button>
+            </div>
+          </div>
+          <div id="chartContainer" class="chart-container"></div>
+        </div>
+
+        <div class="card">
+          <div class="list-header">
+            <h2>측정 기록 (<span id="historyCount">0</span>)</h2>
+            <div class="list-actions">
+              <button id="exportCsvBtn" class="btn-chip" type="button">엑셀(CSV) 저장</button>
+              <button id="seedSampleBtn" class="btn-chip" type="button">샘플 넣기</button>
+              <button id="clearHistoryBtn" class="btn-chip danger" type="button">전체 삭제</button>
+            </div>
+          </div>
+          <ul id="historyList" class="history-list"></ul>
+        </div>
+      </section>
+
+      <!-- 4. 내 정보 탭 -->
+      <section id="tab-profile" class="tab-panel">
+        <div class="card">
+          <h2>내 신체 정보</h2>
+          <p class="help-text">체지방률과 근육량 계산에 사용되며, 이 기기 안에만 안전하게 저장됩니다.</p>
+          <form id="profileForm" class="profile-form">
+            <label>
+              <span>성별</span>
+              <select id="profSex">
+                <option value="male">남성</option>
+                <option value="female">여성</option>
+              </select>
+            </label>
+            <label>
+              <span>키 (cm)</span>
+              <input id="profHeight" type="number" step="0.5" min="100" max="230" required />
+            </label>
+            <label>
+              <span>나이 (만 나이)</span>
+              <input id="profAge" type="number" min="10" max="100" required />
+            </label>
+            <label>
+              <span>목표 체중 (kg)</span>
+              <input id="profGoal" type="number" step="0.1" min="30" max="200" required />
+            </label>
+            <button class="btn btn-primary" type="submit">내 정보 저장하기</button>
+          </form>
+          <p id="profileSavedMsg" class="saved-msg hidden">저장되었습니다! 리포트에 바로 반영됐어요.</p>
+        </div>
+
+        <div class="card info-card">
+          <h2>갤럭시 앱 설치 방법</h2>
+          <ol class="guide-list">
+            <li>갤럭시 Chrome 브라우저에서 이 페이지를 엽니다.</li>
+            <li>상단 <strong>「앱 설치」</strong> 버튼을 누르거나, 우측 상단 메뉴(⋮) → <strong>홈 화면에 추가</strong>를 누릅니다.</li>
+            <li>홈 화면에 생긴 <strong>내 체중계</strong> 아이콘으로 실행하면 일반 앱처럼 쓸 수 있어요.</li>
+          </ol>
+        </div>
+      </section>
+    </main>
+
+    <nav class="bottom-nav" aria-label="주 메뉴">
+      <button type="button" class="nav-btn active" data-tab="measure">
+        <span class="nav-icon">⚖️</span>
+        <span>측정하기</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="report">
+        <span class="nav-icon">📊</span>
+        <span>신체 분석</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="history">
+        <span class="nav-icon">📈</span>
+        <span>변화 그래프</span>
+      </button>
+      <button type="button" class="nav-btn" data-tab="profile">
+        <span class="nav-icon">👤</span>
+        <span>내 정보</span>
+      </button>
+    </nav>
+  </div>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

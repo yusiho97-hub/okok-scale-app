@@ -1,0 +1,25 @@
+{
+  "name": "내 체중계 — 스마트 바디 트래커",
+  "short_name": "내 체중계",
+  "description": "OKOK 호환 블루투스 체중계 연동 및 신체 분석 앱",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8fafc",
+  "theme_color": "#0f766e",
+  "lang": "ko",
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
