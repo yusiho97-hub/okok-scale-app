@@ -1,4 +1,4 @@
-const CACHE_NAME = 'okok-scale-pwa-v1';
+const CACHE_NAME = 'okok-scale-pwa-v2';
 const ASSETS = [
   './',
   './index.html',

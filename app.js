@@ -78,11 +78,14 @@ function setStatus(text, type = 'idle') {
 
 // 블루투스 GATT 연결
 const connectGattBtn = document.getElementById('connectGattBtn');
-connectGattBtn.addEventListener('click', async () => {
+const connectAllBtn = document.getElementById('connectAllBtn');
+
+async function handleGattConnect(btn, defaultLabel, filterOnly) {
   if (activeGattConn) {
     activeGattConn.disconnect();
     activeGattConn = null;
-    connectGattBtn.textContent = '블루투스 체중계 연결';
+    connectGattBtn.textContent = '체중계만 골라서 연결 (추천)';
+    connectAllBtn.textContent = '전체 블루투스 기기에서 찾기';
     setStatus('대기 중', 'idle');
     return;
   }
@@ -90,23 +93,37 @@ connectGattBtn.addEventListener('click', async () => {
   try {
     setStatus('연결 중...', 'scanning');
     activeGattConn = await connectScaleGatt({
+      filterOnly,
       onLog: appendLog,
       onMeasurement: handleIncomingMeasurement,
       onDisconnect: () => {
         activeGattConn = null;
-        connectGattBtn.textContent = '블루투스 체중계 연결';
+        connectGattBtn.textContent = '체중계만 골라서 연결 (추천)';
+        connectAllBtn.textContent = '전체 블루투스 기기에서 찾기';
         setStatus('연결 종료', 'idle');
       }
     });
-    connectGattBtn.textContent = `연결 끊기 (${activeGattConn.deviceName})`;
+    btn.textContent = `연결 끊기 (${activeGattConn.deviceName})`;
     setStatus('연결됨', 'connected');
     liveSubInfoEl.textContent = '체중계에 맨발로 올라가면 측정값이 자동으로 들어옵니다.';
   } catch (err) {
+    if (err.name === 'NotFoundError') {
+      appendLog('기기 선택을 취소했거나 일치하는 체중계가 아직 깨어나지 않았습니다.');
+      setStatus('대기 중', 'idle');
+      return;
+    }
     appendLog(`오류: ${err.message}`);
     setStatus('연결 안 됨', 'error');
     alert(err.message);
   }
-});
+}
+
+connectGattBtn.addEventListener('click', () =>
+  handleGattConnect(connectGattBtn, '체중계만 골라서 연결 (추천)', true)
+);
+connectAllBtn.addEventListener('click', () =>
+  handleGattConnect(connectAllBtn, '전체 블루투스 기기에서 찾기', false)
+);
 
 // 블루투스 광고 스캔 모드
 const scanBleBtn = document.getElementById('scanBleBtn');

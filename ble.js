@@ -15,6 +15,26 @@ const SCALE_SERVICE_UUIDS = [
   0x180a
 ];
 
+const SCALE_FILTERS = [
+  { services: [0x181d] },
+  { services: [0x181b] },
+  { services: [0xfff0] },
+  { services: [0xffe0] },
+  { services: [0xffb0] },
+  { namePrefix: 'OKOK' },
+  { namePrefix: 'okok' },
+  { namePrefix: 'Chipsea' },
+  { namePrefix: 'CS' },
+  { namePrefix: 'QN-' },
+  { namePrefix: 'Yoda' },
+  { namePrefix: 'Scale' },
+  { namePrefix: 'Health' },
+  { namePrefix: 'BF' },
+  { namePrefix: 'Elec' },
+  { namePrefix: 'MIBFS' },
+  { namePrefix: 'XMTZC' }
+];
+
 export function isWebBluetoothSupported() {
   return typeof navigator !== 'undefined' && 'bluetooth' in navigator;
 }
@@ -100,16 +120,16 @@ export function parseScaleBytes(dataView, uuid = '') {
   return null;
 }
 
-export async function connectScaleGatt({ onLog, onMeasurement, onDisconnect }) {
+export async function connectScaleGatt({ onLog, onMeasurement, onDisconnect, filterOnly = true }) {
   if (!isWebBluetoothSupported()) {
     throw new Error('이 브라우저는 블루투스 연결을 지원하지 않아요. 안드로이드 Chrome을 사용해 주세요.');
   }
 
-  onLog('체중계 선택 창을 여는 중...');
-  const device = await navigator.bluetooth.requestDevice({
-    acceptAllDevices: true,
-    optionalServices: SCALE_SERVICE_UUIDS
-  });
+  onLog(filterOnly ? '체중계 전용 검색 창을 여는 중...' : '전체 블루투스 기기 검색 창을 여는 중...');
+  const requestOptions = filterOnly
+    ? { filters: SCALE_FILTERS, optionalServices: SCALE_SERVICE_UUIDS }
+    : { acceptAllDevices: true, optionalServices: SCALE_SERVICE_UUIDS };
+  const device = await navigator.bluetooth.requestDevice(requestOptions);
 
   onLog(`기기 선택됨: ${device.name || '이름 없는 체중계'}`);
   device.addEventListener('gattserverdisconnected', () => {
